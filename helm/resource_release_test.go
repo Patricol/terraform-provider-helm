@@ -111,6 +111,7 @@ func TestAccResourceRelease_import(t *testing.T) {
 					resource.TestCheckResourceAttr("helm_release.imported", "replace", "false"),
 					resource.TestCheckResourceAttr("helm_release.imported", "disable_openapi_validation", "false"),
 					resource.TestCheckResourceAttr("helm_release.imported", "create_namespace", "false"),
+					resource.TestCheckResourceAttr("helm_release.imported", "values_map", "{}"), // TODO verify
 				),
 			},
 		},
@@ -667,9 +668,44 @@ func testAccHelmReleaseConfigSensitiveValue(resource, ns, name, chart, version s
 func TestGetValues(t *testing.T) {
 	d := resourceRelease().Data(nil)
 	err := d.Set("values", []string{
-		"foo: bar\nbaz: corge",
+		"foo: bar\nfoom: barm\nbaz: corge",
 		"first: present\nbaz: grault",
 		"second: present\nbaz: uier",
+	})
+	if err != nil {
+		t.Fatalf("error setting values: %v", err)
+	}
+	err = d.Set("values_map", map[string]interface{}{
+		"foom":       "quxm",
+		"intm":       43,
+		"list":       []string{"a", "b"},
+		"list_mixed": []interface{}{"c", 3},
+		"map": map[string]interface{}{
+			"d": 4,
+			"e": "f",
+		},
+		"null": nil,
+		"complex_nested": map[string]interface{}{
+			"g": []interface{}{
+				[]interface{}{
+					map[string]interface{}{
+						"j": "k",
+					},
+				},
+			},
+			"l": map[string]interface{}{
+				"m": map[string]interface{}{
+					"n": []interface{}{
+						5,
+					},
+					"o": "p",
+				},
+				"q": "r",
+				"s": map[string]interface{}{
+					"t": "u",
+				},
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("error setting values: %v", err)
@@ -691,8 +727,14 @@ func TestGetValues(t *testing.T) {
 	if values["foo"] != "qux" {
 		t.Fatalf("error merging values, expected %q, got %q", "qux", values["foo"])
 	}
+	if values["foom"] != "quxm" {
+		t.Fatalf("error merging values, expected %q, got %q", "quxm", values["foom"])
+	}
 	if values["int"] != int64(42) {
 		t.Fatalf("error merging values, expected %s, got %s", "42", values["int"])
+	}
+	if values["intm"] != int64(43) {
+		t.Fatalf("error merging values, expected %s, got %s", "43", values["intm"])
 	}
 	if values["first"] != "present" {
 		t.Fatalf("error merging values from file, expected value file %q not read", "testdata/get_values_first.yaml")

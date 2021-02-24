@@ -49,6 +49,7 @@ var defaultAttributes = map[string]interface{}{
 	"replace":                    false,
 	"create_namespace":           false,
 	"lint":                       false,
+	"values_map":                 map[string]interface{}{},
 }
 
 func resourceRelease() *schema.Resource {
@@ -124,6 +125,13 @@ func resourceRelease() *schema.Resource {
 				Optional:    true,
 				Description: "List of values in raw yaml format to pass to helm.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+			"values_map": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Default:     defaultAttributes["values_map"],
+				Description: "Map of values to be merged with the values.",
+				Elem:        &schema.Schema{Type: schema.TypeString}, // TODO needs to accept mixed types
 			},
 			"set": {
 				Type:        schema.TypeSet,
@@ -863,6 +871,9 @@ func getValues(d resourceGetter) (map[string]interface{}, error) {
 
 		base = mergeMaps(base, currentMap)
 	}
+
+	valuesMap := d.Get("values_map").(map[string]interface{}) // TODO this will likely just pick up as interface?
+	base = mergeMaps(base, valuesMap)
 
 	for _, raw := range d.Get("set").(*schema.Set).List() {
 		set := raw.(map[string]interface{})
